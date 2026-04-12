@@ -1,0 +1,26 @@
+# Netlify project: iocl-tech-team / cnd-unload
+# Site ID (Project ID): 4bd9b0a9-838c-44ff-9dae-8c97c53a46ba
+#
+# Link this repo locally:
+#   npx netlify-cli link --id 4bd9b0a9-838c-44ff-9dae-8c97c53a46ba
+#
+# Netlify UI → Project configuration → Environment variables → Production:
+#   VITE_API_URL = https://your-api-host.example.com   (no trailing slash; your Express API)
+#
+# GitHub → Settings → Secrets and variables → Actions (for .github/workflows/netlify.yml):
+#   NETLIFY_AUTH_TOKEN  — User settings → Applications → Personal access tokens → New token
+#   NETLIFY_SITE_ID     = 4bd9b0a9-838c-44ff-9dae-8c97c53a46ba
+#   VITE_API_URL        — same as Netlify env (needed at build time in CI)
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# SPA fallback (React Router)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -9,6 +9,11 @@ lerna-debug.log*
 
 node_modules
 dist
+
+# Netlify CLI local link (do not commit)
+.netlify
+.env
+.env.*.local
 dist-ssr
 *.local
 
