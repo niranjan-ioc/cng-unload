@@ -5,17 +5,42 @@ export type UnloadPayload = CngUnloadFormValues & {
   submittedByMobile: string
 }
 
+/**
+ * In dev, Vite proxies `/api` → local Express. In production (e.g. Netlify), same-origin
+ * `/api` is rewritten to `index.html`, so you must set `VITE_API_URL` to your API origin.
+ */
 function apiBase(): string {
-  const v = import.meta.env.VITE_API_URL
-  return typeof v === 'string' && v.length > 0 ? v.replace(/\/$/, '') : ''
+  const raw = import.meta.env.VITE_API_URL
+  const trimmed =
+    typeof raw === 'string' ? raw.trim().replace(/\/$/, '') : ''
+
+  if (trimmed.length > 0) return trimmed
+
+  if (import.meta.env.DEV) return ''
+
+  throw new Error(
+    'Missing VITE_API_URL. Netlify (and other static hosts) do not run your Express API. Add your public API URL under Site configuration → Environment variables → VITE_API_URL (no trailing slash), then trigger a new deploy.'
+  )
 }
 
 async function parseJson<T>(res: Response): Promise<T> {
-  return (await res.json()) as T
+  const text = await res.text()
+  const start = text.trimStart()
+  if (start.startsWith('<')) {
+    throw new Error(
+      'Got an HTML page instead of API data. Usually this means VITE_API_URL is unset and /api was served as the SPA shell. Set VITE_API_URL to your backend and redeploy.'
+    )
+  }
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    throw new Error('Invalid JSON from server')
+  }
 }
 
 export async function fetchPublicSettings(): Promise<PublicAppSettings> {
-  const res = await fetch(`${apiBase()}/api/settings`)
+  const base = apiBase()
+  const res = await fetch(`${base}/api/settings`)
   const data = await parseJson<{ error?: string } & PublicAppSettings>(res)
   if (!res.ok) {
     throw new Error(
@@ -30,7 +55,8 @@ export async function fetchPublicSettings(): Promise<PublicAppSettings> {
 }
 
 export async function checkMobileAccess(rawMobile: string): Promise<boolean> {
-  const res = await fetch(`${apiBase()}/api/access/check`, {
+  const base = apiBase()
+  const res = await fetch(`${base}/api/access/check`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rawMobile }),
@@ -47,7 +73,8 @@ export async function checkMobileAccess(rawMobile: string): Promise<boolean> {
 export async function submitUnload(
   payload: UnloadPayload
 ): Promise<{ id: string }> {
-  const res = await fetch(`${apiBase()}/api/unloads`, {
+  const base = apiBase()
+  const res = await fetch(`${base}/api/unloads`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -85,7 +112,8 @@ export async function postAdminLogin(
   email: string,
   password: string
 ): Promise<{ token: string; email: string }> {
-  const res = await fetch(`${apiBase()}/api/admin/session`, {
+  const base = apiBase()
+  const res = await fetch(`${base}/api/admin/session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -107,7 +135,8 @@ export async function postAdminLogin(
 export async function fetchAdminSettings(): Promise<FullAppSettings> {
   const token = getAdminToken()
   if (!token) throw new Error('Not signed in')
-  const res = await fetch(`${apiBase()}/api/admin/settings`, {
+  const base = apiBase()
+  const res = await fetch(`${base}/api/admin/settings`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   const data = await parseJson<{ error?: string } & Partial<FullAppSettings>>(
@@ -126,7 +155,8 @@ export async function putAdminSettings(
 ): Promise<FullAppSettings> {
   const token = getAdminToken()
   if (!token) throw new Error('Not signed in')
-  const res = await fetch(`${apiBase()}/api/admin/settings`, {
+  const base = apiBase()
+  const res = await fetch(`${base}/api/admin/settings`, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,

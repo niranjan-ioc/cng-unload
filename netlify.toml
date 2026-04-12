@@ -4,8 +4,10 @@
 # Link this repo locally:
 #   npx netlify-cli link --id 4bd9b0a9-838c-44ff-9dae-8c97c53a46ba
 #
+# REQUIRED for this app to work: API runs on Express elsewhere (not on Netlify).
 # Netlify UI → Project configuration → Environment variables → Production:
-#   VITE_API_URL = https://your-api-host.example.com   (no trailing slash; your Express API)
+#   VITE_API_URL = https://your-api-host.example.com   (no trailing slash)
+# Then trigger a new deploy. Without this, /api/* hits the SPA and returns HTML.
 #
 # GitHub → Settings → Secrets and variables → Actions (for .github/workflows/netlify.yml):
 #   NETLIFY_AUTH_TOKEN  — User settings → Applications → Personal access tokens → New token
