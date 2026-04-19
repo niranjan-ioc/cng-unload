@@ -6,21 +6,11 @@ export type UnloadPayload = CngUnloadFormValues & {
 }
 
 /**
- * In dev, Vite proxies `/api` → local Express. In production (e.g. Netlify), same-origin
- * `/api` is rewritten to `index.html`, so you must set `VITE_API_URL` to your API origin.
+ * Same-origin `/api` — Vite dev server proxies to Express; Netlify uses
+ * `dist/_redirects` (written at build from VITE_API_URL) to proxy to your API.
  */
 function apiBase(): string {
-  const raw = import.meta.env.VITE_API_URL
-  const trimmed =
-    typeof raw === 'string' ? raw.trim().replace(/\/$/, '') : ''
-
-  if (trimmed.length > 0) return trimmed
-
-  if (import.meta.env.DEV) return ''
-
-  throw new Error(
-    'Missing VITE_API_URL. Netlify (and other static hosts) do not run your Express API. Add your public API URL under Site configuration → Environment variables → VITE_API_URL (no trailing slash), then trigger a new deploy.'
-  )
+  return ''
 }
 
 async function parseJson<T>(res: Response): Promise<T> {
@@ -28,7 +18,7 @@ async function parseJson<T>(res: Response): Promise<T> {
   const start = text.trimStart()
   if (start.startsWith('<')) {
     throw new Error(
-      'Got an HTML page instead of API data. Usually this means VITE_API_URL is unset and /api was served as the SPA shell. Set VITE_API_URL to your backend and redeploy.'
+      'Got HTML instead of JSON from /api. On Netlify, set VITE_API_URL (your API origin, no trailing slash) for **builds**, redeploy, and ensure scripts/write-netlify-redirects ran so /api is proxied.'
     )
   }
   try {
@@ -39,8 +29,7 @@ async function parseJson<T>(res: Response): Promise<T> {
 }
 
 export async function fetchPublicSettings(): Promise<PublicAppSettings> {
-  const base = apiBase()
-  const res = await fetch(`${base}/api/settings`)
+  const res = await fetch(`${apiBase()}/api/settings`)
   const data = await parseJson<{ error?: string } & PublicAppSettings>(res)
   if (!res.ok) {
     throw new Error(
@@ -55,8 +44,7 @@ export async function fetchPublicSettings(): Promise<PublicAppSettings> {
 }
 
 export async function checkMobileAccess(rawMobile: string): Promise<boolean> {
-  const base = apiBase()
-  const res = await fetch(`${base}/api/access/check`, {
+  const res = await fetch(`${apiBase()}/api/access/check`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rawMobile }),
@@ -73,8 +61,7 @@ export async function checkMobileAccess(rawMobile: string): Promise<boolean> {
 export async function submitUnload(
   payload: UnloadPayload
 ): Promise<{ id: string }> {
-  const base = apiBase()
-  const res = await fetch(`${base}/api/unloads`, {
+  const res = await fetch(`${apiBase()}/api/unloads`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -112,8 +99,7 @@ export async function postAdminLogin(
   email: string,
   password: string
 ): Promise<{ token: string; email: string }> {
-  const base = apiBase()
-  const res = await fetch(`${base}/api/admin/session`, {
+  const res = await fetch(`${apiBase()}/api/admin/session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -135,8 +121,7 @@ export async function postAdminLogin(
 export async function fetchAdminSettings(): Promise<FullAppSettings> {
   const token = getAdminToken()
   if (!token) throw new Error('Not signed in')
-  const base = apiBase()
-  const res = await fetch(`${base}/api/admin/settings`, {
+  const res = await fetch(`${apiBase()}/api/admin/settings`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   const data = await parseJson<{ error?: string } & Partial<FullAppSettings>>(
@@ -155,8 +140,7 @@ export async function putAdminSettings(
 ): Promise<FullAppSettings> {
   const token = getAdminToken()
   if (!token) throw new Error('Not signed in')
-  const base = apiBase()
-  const res = await fetch(`${base}/api/admin/settings`, {
+  const res = await fetch(`${apiBase()}/api/admin/settings`, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,

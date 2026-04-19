@@ -4,10 +4,11 @@
 # Link this repo locally:
 #   npx netlify-cli link --id 4bd9b0a9-838c-44ff-9dae-8c97c53a46ba
 #
-# REQUIRED for this app to work: API runs on Express elsewhere (not on Netlify).
-# Netlify UI → Project configuration → Environment variables → Production:
-#   VITE_API_URL = https://your-api-host.example.com   (no trailing slash)
-# Then trigger a new deploy. Without this, /api/* hits the SPA and returns HTML.
+# REQUIRED for production: API origin (no trailing slash). Used at **build** time
+# to generate dist/_redirects so /api/* is proxied to your Express server.
+# Netlify → Environment variables → add for **Builds** (and Production if same):
+#   VITE_API_URL = https://your-api.example.com
+# Then redeploy. npm run build runs scripts/write-netlify-redirects.mjs after Vite.
 #
 # GitHub → Settings → Secrets and variables → Actions (for .github/workflows/netlify.yml):
 #   NETLIFY_AUTH_TOKEN  — User settings → Applications → Personal access tokens → New token
@@ -21,8 +22,4 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# SPA fallback (React Router)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# SPA + /api proxy: generated in dist/_redirects by scripts/write-netlify-redirects.mjs
